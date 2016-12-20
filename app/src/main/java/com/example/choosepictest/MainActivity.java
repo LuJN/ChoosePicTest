@@ -17,7 +17,6 @@ import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -28,7 +27,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String TAG = "MainActivity";
     private static final int TAKE_PHOTO = 1;
     private static final int CROP_PHOTO = 2;
     private static final int CHOOSE_PHOTO = 3;
@@ -97,9 +95,6 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     Bitmap bitmap = BitmapFactory.decodeStream(
                             getContentResolver().openInputStream(mImageUri));
-                    if(bitmap == null) {
-                        Log.i(TAG, "bitmap == null");
-                    }
                     mPicture.setImageBitmap(bitmap);
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
@@ -124,15 +119,21 @@ public class MainActivity extends AppCompatActivity {
     private void handleImageOnKitKat(Intent data) {
         String imagePath = null;
         Uri uri = data.getData();
-        String docId = DocumentsContract.getDocumentId(uri);
-        if (uri.getAuthority().equals("com.android.providers.media.documents")) {
-            String id = docId.split(":")[1];// 解析出数字格式的id
-            String selection = MediaStore.Images.Media._ID + " = " + id;
-            imagePath = getImagePath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, selection);
-        } else if (uri.getAuthority().equals("com.android.providers.downloads.documents")) {
-            Uri contentUri = ContentUris.withAppendedId(
-                    Uri.parse("content://downloads/public_downloads"), Long.valueOf(docId));
-            imagePath = getImagePath(contentUri, null);
+        if(DocumentsContract.isDocumentUri(this, uri)) {
+            // 如果是document类型的Uri，则通过document id处理
+            String docId = DocumentsContract.getDocumentId(uri);
+            if(uri.getAuthority().equals("com.android.providers.media.documents")) {
+                String id = docId.split(":")[1];// 解析出数字格式的id
+                String selection = MediaStore.Images.Media._ID + " = " + id;
+                imagePath = getImagePath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, selection);
+            } else if(uri.getAuthority().equals("com.android.providers.downloads.documents")) {
+                Uri contentUri = ContentUris.withAppendedId(
+                        Uri.parse("content://downloads/public_downloads"), Long.valueOf(docId));
+                imagePath = getImagePath(contentUri, null);
+            }
+        } else if(uri.getScheme().equalsIgnoreCase("content")) {
+            // 如果不是document类型的Uri，则使用普通方式处理
+            imagePath = getImagePath(uri, null);
         }
         displayImage(imagePath);// 根据图片路径显示图片
     }
