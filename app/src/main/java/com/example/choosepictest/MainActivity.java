@@ -124,21 +124,15 @@ public class MainActivity extends AppCompatActivity {
     private void handleImageOnKitKat(Intent data) {
         String imagePath = null;
         Uri uri = data.getData();
-        if(DocumentsContract.isDocumentUri(this, uri)) {
-            // 如果是document类型的Uri，则通过document id处理
-            String docId = DocumentsContract.getDocumentId(uri);
-            if(uri.getAuthority().equals("com.android.providers.media.documents")) {
-                String id = docId.split(":")[1];// 解析出数字格式的id
-                String selection = MediaStore.Images.Media._ID + " = " + id;
-                imagePath = getImagePath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, selection);
-            } else if(uri.getAuthority().equals("com.android.providers.downloads.documents")) {
-                Uri contentUri = ContentUris.withAppendedId(
-                        Uri.parse("content://downloads/public_downloads"), Long.valueOf(docId));
-                imagePath = getImagePath(contentUri, null);
-            }
-        } else if(uri.getScheme().equalsIgnoreCase("content")) {
-            // 如果不是document类型的Uri，则使用普通方式处理
-            imagePath = getImagePath(uri, null);
+        String docId = DocumentsContract.getDocumentId(uri);
+        if (uri.getAuthority().equals("com.android.providers.media.documents")) {
+            String id = docId.split(":")[1];// 解析出数字格式的id
+            String selection = MediaStore.Images.Media._ID + " = " + id;
+            imagePath = getImagePath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, selection);
+        } else if (uri.getAuthority().equals("com.android.providers.downloads.documents")) {
+            Uri contentUri = ContentUris.withAppendedId(
+                    Uri.parse("content://downloads/public_downloads"), Long.valueOf(docId));
+            imagePath = getImagePath(contentUri, null);
         }
         displayImage(imagePath);// 根据图片路径显示图片
     }
