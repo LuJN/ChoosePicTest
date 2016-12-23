@@ -2,8 +2,9 @@ package com.example.choosepictest;
 
 import android.Manifest;
 import android.annotation.TargetApi;
-import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ContentUris;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -16,6 +17,7 @@ import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
@@ -34,16 +36,13 @@ public class MainActivity extends AppCompatActivity {
     private Button mChooseFromAlbum;
     private ImageView mPicture;
     private Uri mImageUri;
-    private static final int REQUEST_EXTERNAL_STORAGE = 100;
-    private static String[] PERMISSIONS_EXTERNAL_STORAGE = {Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.READ_EXTERNAL_STORAGE};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        verifyStoragePermissions(this);
+        requestApplicationPermissions();
         mTakePhoto = (Button) findViewById(R.id.id_take_photo);
         mChooseFromAlbum = (Button) findViewById(R.id.id_choose_from_album);
         mPicture = (ImageView) findViewById(R.id.id_picture);
@@ -76,6 +75,55 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void requestApplicationPermissions() {
+        if (ContextCompat.checkSelfPermission(MainActivity.this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            if(ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                showDialog();
+            } else {
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+            }
+        }
+    }
+
+    private void showDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("申请SD卡权限").setMessage("拍照功能需要申请SD卡权限，否则无法使用")
+                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        ActivityCompat.requestPermissions(MainActivity.this,
+                                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+                    }
+                })
+                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        Toast.makeText(MainActivity.this, "Permission Denied",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+        builder.create().show();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch(requestCode) {
+            case 1:
+                if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(MainActivity.this, "Permission Granted", Toast.LENGTH_SHORT).show();
+                } else {
+                    showDialog();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -84,7 +132,6 @@ public class MainActivity extends AppCompatActivity {
         }
         switch(requestCode) {
             case TAKE_PHOTO:
-                int a = 0;
                 Intent intent = new Intent("com.android.camera.action.CROP");
                 intent.setDataAndType(mImageUri, "image/*");
                 intent.putExtra("scale", true);
@@ -163,18 +210,6 @@ public class MainActivity extends AppCompatActivity {
             mPicture.setImageBitmap(bitmap);
         } else {
             Toast.makeText(MainActivity.this, "failed to get image", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    public static void verifyStoragePermissions(Activity activity) {
-        // Check if we have write permission
-        int permissionWrite = ActivityCompat.checkSelfPermission(activity,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE);
-
-        if (permissionWrite != PackageManager.PERMISSION_GRANTED) {
-            // We don't have permission so prompt the user
-            ActivityCompat.requestPermissions(activity, PERMISSIONS_EXTERNAL_STORAGE,
-                    REQUEST_EXTERNAL_STORAGE);
         }
     }
 }
